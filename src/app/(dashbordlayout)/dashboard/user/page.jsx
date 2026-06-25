@@ -1,7 +1,9 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import YourChartComponent from "@/Component/YourChartComponent";
 import Link from "next/link";
+import { useSession } from "@/lib/auth-client"; // সেশন থেকে রোল নেওয়ার জন্য
 import {
   FaBook,
   FaHeart,
@@ -10,17 +12,55 @@ import {
   FaArrowRight,
 } from "react-icons/fa";
 
+const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:8000";
+
 const DashboardHome = () => {
-  // dummy data (backend লাগালে replace করবে)
-  const stats = {
-    totalLessons: 24,
-    favorites: 12,
-    recent: [
-      { id: 1, title: "Life Lesson about Consistency" },
-      { id: 2, title: "Failure teaches success" },
-      { id: 3, title: "Discipline is freedom" },
-    ],
+  const { data: session } = useSession();
+  const userRole = session?.user?.role ? session.user.role.toLowerCase() : "user";
+
+  // ডাইনামিক স্টেটস
+  const [stats, setStats] = useState({
+    totalLessons: 0,
+    favorites: 0,
+    recent: [],
+  });
+  const [loading, setLoading] = useState(true);
+
+
+ useEffect(() => {
+  if (!session?.user?.id || !session?.user?.email) return; 
+
+  const fetchDashboardStats = async () => {
+    try {
+      // ইউআরএল-এ userId এবং email দুটোই পাস করা হচ্ছে
+      const response = await fetch(
+        `${SERVER_URL}/api/user/dashboard-summary?userId=${session.user.id}&email=${session.user.email}`
+      );
+      const data = await response.json();
+      
+      if (response.ok && data) {
+        setStats({
+          totalLessons: data.totalLessons || 0,
+          favorites: data.favorites || 0,
+          recent: data.recentLessons || [],
+        });
+      }
+    } catch (error) {
+      console.error("Dashboard stats fetch error:", error);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  fetchDashboardStats();
+}, [session?.user?.id, session?.user?.email]); 
+  if (loading) {
+    return (
+      <div className="h-60 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -31,7 +71,7 @@ const DashboardHome = () => {
           Dashboard Overview
         </h1>
         <p className="text-slate-400 text-sm mt-1">
-          Welcome back! Here’s your activity summary.
+          Welcome back, {session?.user?.name || "Learner"}! Here’s your activity summary.
         </p>
       </div>
 
@@ -40,7 +80,7 @@ const DashboardHome = () => {
 
         <div className="bg-slate-900 border border-white/5 rounded-2xl p-5">
           <div className="flex items-center justify-between">
-            <h3 className="text-slate-300">Total Lessons</h3>
+            <h3 className="text-slate-300 text-sm">Total Lessons</h3>
             <FaBook className="text-violet-400" />
           </div>
           <p className="text-3xl font-bold text-white mt-3">
@@ -50,7 +90,7 @@ const DashboardHome = () => {
 
         <div className="bg-slate-900 border border-white/5 rounded-2xl p-5">
           <div className="flex items-center justify-between">
-            <h3 className="text-slate-300">Favorites</h3>
+            <h3 className="text-slate-300 text-sm">Favorites</h3>
             <FaHeart className="text-pink-400" />
           </div>
           <p className="text-3xl font-bold text-white mt-3">
@@ -58,17 +98,18 @@ const DashboardHome = () => {
           </p>
         </div>
 
-        <div className="bg-slate-900 border border-white/5 rounded-2xl p-5">
+        <div className="bg-slate-900 border border-white/5 rounded-2xl p-5 flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <h3 className="text-slate-300">Quick Add</h3>
+            <h3 className="text-slate-300 text-sm">Quick Add</h3>
             <FaPlus className="text-green-400" />
           </div>
 
+          {/* আপনার ন্যাভবারের ফোল্ডার স্ট্রাকচার /dashboard/user/add-lesson এর সাথে ম্যাচ করা হয়েছে */}
           <Link
-            href="/dashboard/add-lesson"
-            className="inline-flex items-center gap-2 mt-3 text-violet-400 hover:text-white"
+            href={`/dashboard/${userRole}/add-lesson`}
+            className="inline-flex items-center gap-2 mt-3 text-sm text-violet-400 hover:text-white transition-colors"
           >
-            Create new lesson <FaArrowRight />
+            Create new lesson <FaArrowRight className="text-xs" />
           </Link>
         </div>
       </div>
@@ -79,53 +120,60 @@ const DashboardHome = () => {
         {/* Recent Lessons */}
         <div className="lg:col-span-2 bg-slate-900 border border-white/5 rounded-2xl p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-white font-semibold">
+            <h2 className="text-white font-semibold text-sm">
               Recently Added Lessons
             </h2>
             <Link
-              href="/dashboard/my-lessons"
-              className="text-sm text-slate-400 hover:text-white"
+              href={`/dashboard/${userRole}/my-lessons`}
+              className="text-xs text-slate-400 hover:text-white transition-colors"
             >
               View all
             </Link>
           </div>
 
           <div className="space-y-3">
-            {stats.recent.map((lesson) => (
-              <div
-                key={lesson.id}
-                className="p-3 rounded-xl bg-slate-800/40 hover:bg-slate-800 transition"
-              >
-                <p className="text-slate-200">{lesson.title}</p>
-              </div>
-            ))}
+            {stats.recent.length === 0 ? (
+              <p className="text-slate-500 text-xs py-4">No lessons added yet.</p>
+            ) : (
+              stats.recent.map((lesson) => (
+                <div
+                  key={lesson._id || lesson.id}
+                  className="p-3 rounded-xl bg-slate-800/40 hover:bg-slate-800/80 border border-white/5 transition flex justify-between items-center group"
+                >
+                  <p className="text-slate-200 text-sm truncate max-w-[80%]">{lesson.title}</p>
+                  <Link href={`/lessons/${lesson._id}`} className="text-xs text-pink-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                    View →
+                  </Link>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
         {/* Quick Actions */}
         <div className="bg-slate-900 border border-white/5 rounded-2xl p-5">
-          <h2 className="text-white font-semibold mb-4">
+          <h2 className="text-white font-semibold text-sm mb-4">
             Quick Actions
           </h2>
 
-          <div className="space-y-3">
+          <div className="space-y-3 text-xs font-semibold">
             <Link
-              href="/dashboard/add-lesson"
-              className="block p-3 rounded-xl bg-violet-600/20 text-violet-300 hover:bg-violet-600/30"
+              href={`/dashboard/${userRole}/add-lesson`}
+              className="block p-3 rounded-xl bg-violet-600/10 text-violet-400 border border-violet-500/10 hover:bg-violet-600/20 text-center sm:text-left transition"
             >
               + Add New Lesson
             </Link>
 
             <Link
-              href="/dashboard/my-favorites"
-              className="block p-3 rounded-xl bg-pink-600/20 text-pink-300 hover:bg-pink-600/30"
+              href={`/dashboard/${userRole}/my-favorites`}
+              className="block p-3 rounded-xl bg-pink-600/10 text-pink-400 border border-pink-500/10 hover:bg-pink-600/20 text-center sm:text-left transition"
             >
               ❤️ View Favorites
             </Link>
 
             <Link
-              href="/dashboard/profile"
-              className="block p-3 rounded-xl bg-blue-600/20 text-blue-300 hover:bg-blue-600/30"
+              href={`/dashboard/${userRole}/profile`}
+              className="block p-3 rounded-xl bg-blue-600/10 text-blue-400 border border-blue-500/10 hover:bg-blue-600/20 text-center sm:text-left transition"
             >
               👤 Update Profile
             </Link>
@@ -135,12 +183,11 @@ const DashboardHome = () => {
 
       {/* Analytics Chart */}
       <div className="bg-slate-900 border border-white/5 rounded-2xl p-5">
-        <div className="flex items-center gap-2 mb-4 text-white font-semibold">
+        <div className="flex items-center gap-2 mb-4 text-white font-semibold text-sm">
           <FaChartLine className="text-green-400" />
           Weekly Activity
         </div>
 
-        {/* Chart Widget */}
         <div className="w-full">
           <div className="rounded-xl overflow-hidden">
             <YourChartComponent />

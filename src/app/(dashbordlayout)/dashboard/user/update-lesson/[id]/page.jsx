@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
-import { Button, Input, Spinner } from "@heroui/react"; // শুধুমাত্র স্টেবল কম্পোনেন্টগুলো রাখা হয়েছে
+import { Button, Spinner } from "@heroui/react";
 import toast from "react-hot-toast";
 
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:8000";
@@ -12,10 +12,12 @@ const categories = ["Personal Growth", "Career", "Relationships", "Mindset", "Mi
 const tones = ["Motivational", "Sad", "Realization", "Gratitude"];
 
 export default function UpdateLessonPage() {
-    const { data: session } = authClient.useSession();
+    const { data: session, isPending: sessionLoading } = authClient.useSession();
     const router = useRouter();
     const params = useParams();
-    const lessonId = params.id;
+    
+    // SAFE ID FETCHING (Next.js App Router dynamic match)
+    const lessonId = params?.id;
 
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
@@ -28,15 +30,35 @@ export default function UpdateLessonPage() {
         accessLevel: "Free",
     });
 
-    // ─── 1. Fetch Data ──────────────────────────────────────────
+    const userEmail = session?.user?.email;
+    const userRole = session?.user?.role; // Better Auth-এর প্রিমিয়াম রোল ফিল্ড
+
+    // ─── 1. Fetch Data & Security Ownership Check ──────────────────────────────────────────
     useEffect(() => {
         if (!lessonId) return;
+        // সেশন লোড হওয়া পর্যন্ত ওয়েট করা
+        if (sessionLoading) return; 
+        if (!userEmail) {
+            toast.error("Please log in to edit lessons");
+            router.push("/login");
+            return;
+        }
 
         const fetchLessonDetails = async () => {
             try {
                 const res = await fetch(`${SERVER_URL}/api/lessons/${lessonId}`);
                 if (!res.ok) throw new Error("Failed to fetch");
                 const data = await res.json();
+
+                // 🔒 SECURITY CHECK: লেসনের ওনার আর কারেন্ট ইউজার এক কি না?
+                // আপনার ডাটাবেজের ফিল্ডের নাম creatorEmail বা email যেটিই হোক, নিচের লাইনে মিলিয়ে নিবেন
+                const dbCreatorEmail = data?.creatorEmail || data?.email || "";
+                
+                if (dbCreatorEmail.toLowerCase().trim() !== userEmail.toLowerCase().trim() && userRole !== "admin") {
+                    toast.error("Unauthorized! You do not own this lesson.");
+                    router.push("/dashboard/user/my-lessons");
+                    return;
+                }
 
                 setFormData({
                     title: data.title || "",
@@ -54,18 +76,19 @@ export default function UpdateLessonPage() {
         };
 
         fetchLessonDetails();
-    }, [lessonId]);
+    }, [lessonId, userEmail, sessionLoading, userRole, router]);
 
     // ─── 2. Handle Submit ────────────────────────────────────────
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!session?.user?.email) return toast.error("Please log in first");
+        if (!userEmail) return toast.error("Please log in first");
 
         setUpdating(true);
         try {
             const updatedData = {
                 ...formData,
-                creatorEmail: session.user.email.toLowerCase().trim(),
+                // ওনারশিপ সুরক্ষার জন্য ব্যাকএন্ডের verifyOwner মিডলওয়্যারকে পাস করানোর ইমেইল চেক
+                email: userEmail.toLowerCase().trim(),
             };
 
             const res = await fetch(`${SERVER_URL}/api/lessons/${lessonId}`, {
@@ -76,7 +99,8 @@ export default function UpdateLessonPage() {
 
             const data = await res.json();
 
-            if (data.modifiedCount > 0 || data.matchedCount > 0) {
+            // মঙ্গোডিবি অনেক সময় modifiedCount ০ দেয় যদি ইউজার কিছুই চেঞ্জ না করে ডিরেক্ট সেভ দেয়
+            if (data.modifiedCount > 0 || data.matchedCount > 0 || data.success) {
                 toast.success("Lesson updated successfully! 🎉");
                 router.push("/dashboard/user/my-lessons");
                 router.refresh();
@@ -91,22 +115,22 @@ export default function UpdateLessonPage() {
         }
     };
 
-    if (loading) {
+    if (sessionLoading || loading) {
         return (
             <div className="flex justify-center items-center min-h-[60vh]">
-                <Spinner size="lg" color="secondary" label="Loading lesson data..." />
+                <Spinner size="lg" color="secondary" label="Verifying ownership & data..." />
             </div>
         );
     }
 
     return (
-        <div className="max-w-2xl mx-auto p-4 md:p-6 text-white bg-[#0f172a] border border-white/5 rounded-2xl my-10 shadow-xl">
-            <h1 className="text-2xl font-bold mb-6 text-purple-400 flex items-center gap-2">
-                ✏️ Edit/Update Lesson
+        <div className="max-w-2xl mx-auto p-5 md:p-8 text-white bg-slate-900/60 backdrop-blur border border-white/5 rounded-2xl my-10 shadow-2xl">
+            <h1 className="text-xl md:text-2xl font-bold mb-6 bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text text-transparent flex items-center gap-2">
+                ✏️ Edit & Update Lesson
             </h1>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Title Input (HeroUI Input works fine, but standard fallback just in case) */}
+            <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Title Input */}
                 <div className="flex flex-col gap-1.5 w-full">
                     <label className="text-xs text-slate-400 pl-1 font-medium">Lesson Title</label>
                     <input
@@ -115,11 +139,11 @@ export default function UpdateLessonPage() {
                         onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                         required
                         placeholder="Enter lesson title..."
-                        className="w-full bg-transparent border-2 border-white/10 hover:border-white/20 focus:border-purple-500 rounded-xl px-3 py-3 text-sm outline-none transition-all text-slate-200"
+                        className="w-full bg-slate-800/50 border border-white/10 hover:border-white/20 focus:border-purple-500 rounded-xl px-3.5 py-3 text-sm outline-none transition-all text-slate-200"
                     />
                 </div>
 
-                {/* Custom Textarea with Tailwind - 100% Bug Free */}
+                {/* Description Textarea */}
                 <div className="flex flex-col gap-1.5 w-full">
                     <label className="text-xs text-slate-400 pl-1 font-medium">
                         Full Description / Story / Insight
@@ -130,72 +154,69 @@ export default function UpdateLessonPage() {
                         required
                         rows={6}
                         placeholder="Write your story here..."
-                        className="w-full bg-transparent border-2 border-white/10 hover:border-white/20 focus:border-purple-500 rounded-xl px-3 py-3 text-sm outline-none transition-all text-slate-200 resize-y"
+                        className="w-full bg-slate-800/50 border border-white/10 hover:border-white/20 focus:border-purple-500 rounded-xl px-3.5 py-3 text-sm outline-none transition-all text-slate-200 resize-y"
                     />
                 </div>
 
-                {/* Custom Dropdown: Category */}
-                <div className="flex flex-col gap-1.5 w-full">
-                    <label className="text-xs text-slate-400 pl-1 font-medium">Select Category</label>
-                    <select
-                        value={formData.category}
-                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                        required
-                        className="w-full bg-[#1e293b] border border-white/10 focus:border-purple-500 text-white rounded-xl px-3 py-3 text-sm outline-none transition-colors cursor-pointer appearance-none"
-                    >
-                        <option value="" disabled>Choose a Category</option>
-                        {categories.map((cat) => (
-                            <option key={cat} value={cat} className="bg-[#1e293b] text-white">
-                                {cat}
-                            </option>
-                        ))}
-                    </select>
+                {/* Grid for Dropdowns */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Category */}
+                    <div className="flex flex-col gap-1.5 w-full">
+                        <label className="text-xs text-slate-400 pl-1 font-medium">Select Category</label>
+                        <select
+                            value={formData.category}
+                            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                            required
+                            className="w-full bg-slate-800 border border-white/10 focus:border-purple-500 text-slate-200 rounded-xl px-3 py-3 text-sm outline-none cursor-pointer"
+                        >
+                            <option value="" disabled>Choose a Category</option>
+                            {categories.map((cat) => (
+                                <option key={cat} value={cat} className="bg-slate-900">
+                                    {cat}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Emotional Tone */}
+                    <div className="flex flex-col gap-1.5 w-full">
+                        <label className="text-xs text-slate-400 pl-1 font-medium">Emotional Tone</label>
+                        <select
+                            value={formData.emotionalTone}
+                            onChange={(e) => setFormData({ ...formData, emotionalTone: e.target.value })}
+                            required
+                            className="w-full bg-slate-800 border border-white/10 focus:border-purple-500 text-slate-200 rounded-xl px-3 py-3 text-sm outline-none cursor-pointer"
+                        >
+                            <option value="" disabled>Choose a Tone</option>
+                            {tones.map((tone) => (
+                                <option key={tone} value={tone} className="bg-slate-900">
+                                    {tone}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
 
-                {/* Custom Dropdown: Emotional Tone */}
-                <div className="flex flex-col gap-1.5 w-full">
-                    <label className="text-xs text-slate-400 pl-1 font-medium">Emotional Tone</label>
-                    <select
-                        value={formData.emotionalTone}
-                        onChange={(e) => setFormData({ ...formData, emotionalTone: e.target.value })}
-                        required
-                        className="w-full bg-[#1e293b] border border-white/10 focus:border-purple-500 text-white rounded-xl px-3 py-3 text-sm outline-none transition-colors cursor-pointer appearance-none"
-                    >
-                        <option value="" disabled>Choose a Tone</option>
-                        {tones.map((tone) => (
-                            <option key={tone} value={tone} className="bg-[#1e293b] text-white">
-                                {tone}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-
-                {/* Custom Dropdown: Access Level */}
+                {/* Access Level Dropdown */}
                 <div className="flex flex-col gap-1.5 w-full">
                     <label className="text-xs text-slate-400 pl-1 font-medium">Access Level</label>
                     <select
                         value={formData.accessLevel}
                         onChange={(e) => setFormData({ ...formData, accessLevel: e.target.value })}
                         required
-                        className="w-full bg-[#1e293b] border border-white/10 focus:border-purple-500 text-white rounded-xl px-3 py-3 text-sm outline-none transition-colors cursor-pointer appearance-none"
+                        className="w-full bg-slate-800 border border-white/10 focus:border-purple-500 text-slate-200 rounded-xl px-3 py-3 text-sm outline-none cursor-pointer"
                     >
-                        {/* Free অপশনটি সবার জন্য খোলা থাকবে */}
-                        <option value="Free" className="bg-[#1e293b] text-white">
-                            Free
-                        </option>
-
-                        {/* ইউজার যদি প্রিমিয়াম বা এডমিন না হয়, তবে এই অপশনটি disabled থাকবে */}
+                        <option value="Free" className="bg-slate-900">Free</option>
                         <option
                             value="Premium"
-                            className="bg-[#1e293b] text-white disabled:text-slate-500 disabled:cursor-not-allowed"
-                            disabled={session?.user?.role !== "premium" && session?.user?.role !== "admin"} // <── আপনার প্রজেক্টের রোল অনুযায়ী 'premium' বা 'admin' নাম মিলিয়ে নিন
+                            className="bg-slate-900 disabled:text-slate-500 disabled:cursor-not-allowed"
+                            disabled={userRole !== "premium" && userRole !== "admin"}
                         >
-                            ⭐ Premium {session?.user?.role !== "premium" && session?.user?.role !== "admin" ? "(Pro Only)" : ""}
+                            ⭐ Premium {userRole !== "premium" && userRole !== "admin" ? "(Pro Only)" : ""}
                         </option>
                     </select>
 
-                    {/* ফ্রি ইউজারদের জন্য ছোট একটা নোটিশ (ঐচ্ছিক, দেখতে সুন্দর লাগবে) */}
-                    {session?.user?.role !== "premium" && session?.user?.role !== "admin" && (
+                    {userRole !== "premium" && userRole !== "admin" && (
                         <p className="text-[11px] text-amber-400/80 pl-1">
                             ⚠️ Upgrade your account to post Premium lessons.
                         </p>
@@ -206,7 +227,7 @@ export default function UpdateLessonPage() {
                 <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
                     <Button
                         variant="flat"
-                        className="bg-slate-800 text-white hover:bg-slate-700"
+                        className="bg-slate-800 text-slate-300 hover:bg-slate-700 font-medium"
                         onPress={() => router.push("/dashboard/user/my-lessons")}
                     >
                         Cancel

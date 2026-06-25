@@ -44,6 +44,9 @@ export default function Navbar() {
   const user = session?.user;
   const isFreePlan = user?.plan === "free" || !user?.plan;
 
+  // ড্যাশবোর্ড রাউট সেফলি হ্যান্ডেল করার জন্য রোল লোয়ারকেস করা (যেমন: user, admin)
+  const userRole = user?.role ? user.role.toLowerCase() : "user";
+
   const navLink = (href, label, exact = false) => {
     const isActive = exact ? pathname === href : pathname.startsWith(href);
     return (
@@ -88,7 +91,10 @@ export default function Navbar() {
           {mobileOpen ? <FaTimes size={18} /> : <FaBars size={18} />}
         </button>
 
-        {/* LOGO */}
+        {/* LOGO: লোগো অ্যাড করা হয়েছে যাতে লেআউট নষ্ট না হয় */}
+        <Link href="/" className="text-xl font-bold bg-gradient-to-r from-pink-500 to-indigo-500 bg-clip-text text-transparent">
+          DevLessons
+        </Link>
 
         {/* DESKTOP NAV */}
         <div className="hidden md:flex items-center gap-8">
@@ -163,8 +169,9 @@ export default function Navbar() {
                     <span>Profile</span>
                   </Link>
 
+                  {/* FIXED DYNAMIC DASHBOARD ROUTE (Safely lowercase) */}
                   <Link
-                    href={`/dashboard/${user.role || ""}`}
+                    href={`/dashboard/${userRole}`}
                     onClick={() => setDropdownOpen(false)}
                     className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition cursor-pointer"
                   >
@@ -215,8 +222,8 @@ export default function Navbar() {
 
           {mobileNavLink("/", "Home", true)}
           {mobileNavLink("/public-lessons", "Public Lessons")}
-          {user && mobileNavLink("/dashboard/add-lesson", "Add Lesson")}
-          {user && mobileNavLink("/dashboard/my-lessons", "My Lessons")}
+          {user && mobileNavLink("/dashboard/user/add-lesson", "Add Lesson")}
+          {user && mobileNavLink("/dashboard/user/my-lessons", "My Lessons")}
 
           {user && isFreePlan && (
             <Link

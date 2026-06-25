@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import {
   FaFacebookF,
@@ -69,8 +67,9 @@ const Footer = () => {
                 Pricing
               </Link>
 
+              {/* FIXED: ড্যাশবোর্ডের মূল রুটের সাথে সামঞ্জস্য রেখে ইউজার ড্যাশবোর্ডে পাঠানো হয়েছে */}
               <Link
-                href="/dashboard"
+                href="/dashboard/user/my-lessons"
                 className="hover:text-pink-500 transition"
               >
                 Dashboard
@@ -85,7 +84,6 @@ const Footer = () => {
             </h3>
 
             <div className="space-y-4 text-slate-400">
-
               <div className="flex items-center gap-3">
                 <FaEnvelope className="text-pink-500" />
                 <span>support@digitallifelessons.com</span>
@@ -96,9 +94,7 @@ const Footer = () => {
                 <span>+880 1234-567890</span>
               </div>
 
-              <p>
-                Dhaka, Bangladesh
-              </p>
+              <p>Dhaka, Bangladesh</p>
             </div>
           </div>
 
@@ -124,52 +120,56 @@ const Footer = () => {
               </Link>
             </div>
 
+            {/* FIXED: এক্সটার্নাল লিংকের সিকিউরিটি (target="_blank" rel="noopener noreferrer") যোগ করা হয়েছে */}
             <div className="flex items-center gap-4">
-
               <a
-                href="#"
+                href="https://facebook.com"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="h-11 w-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-300 hover:bg-pink-500 hover:text-white transition-all duration-300"
               >
                 <FaFacebookF />
               </a>
 
               <a
-                href="#"
+                href="https://x.com"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="h-11 w-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-300 hover:bg-pink-500 hover:text-white transition-all duration-300"
               >
                 <FaXTwitter />
               </a>
 
               <a
-                href="#"
+                href="https://linkedin.com"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="h-11 w-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-300 hover:bg-pink-500 hover:text-white transition-all duration-300"
               >
                 <FaLinkedinIn />
               </a>
 
               <a
-                href="#"
+                href="https://github.com"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="h-11 w-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-300 hover:bg-pink-500 hover:text-white transition-all duration-300"
               >
                 <FaGithub />
               </a>
-
             </div>
           </div>
         </div>
 
         {/* Bottom */}
         <div className="border-t border-white/10 mt-12 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
-
           <p className="text-slate-500 text-sm text-center">
-            © {new Date().getFullYear()} Digital Life Lessons. All Rights
-            Reserved.
+            © {new Date().getFullYear()} Digital Life Lessons. All Rights Reserved.
           </p>
 
           <p className="text-slate-500 text-sm">
             Built with ❤️ using Next.js & HeroUI
           </p>
-
         </div>
       </div>
     </footer>
