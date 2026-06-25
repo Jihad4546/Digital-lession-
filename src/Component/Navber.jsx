@@ -94,8 +94,8 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-8">
           {navLink("/", "Home", true)}
           {navLink("/public-lessons", "Public Lessons")}
-          {user && navLink("/dashboard/add-lesson", "Add Lesson")}
-          {user && navLink("/dashboard/my-lessons", "My Lessons")}
+          {user && navLink("/dashboard/user/add-lesson", "Add Lesson")}
+          {user && navLink("/dashboard/user/my-lessons", "My Lessons")}
           {user && isFreePlan && (
             <Link
               href="/pricing"

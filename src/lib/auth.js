@@ -3,25 +3,27 @@ import { mongodbAdapter } from 'better-auth/adapters/mongodb';
 import { MongoClient } from 'mongodb';
 
 const client = new MongoClient(process.env.MONGODB_URI);
+
+// Connection await করতে হবে
+await client.connect();
+
 const db = client.db(process.env.DB_NAME);
 
 export const auth = betterAuth({
-  database: mongodbAdapter(db, {
-    client,
-  }),
+  database: mongodbAdapter(db),  // client আলাদা দেওয়ার দরকার নেই
   emailAndPassword: {
     enabled: true,
   },
   socialProviders: {
     google: {
-      clientId: process.env.GOOGLE_CLIENT_ID || 'placeholder-google-client-id',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || 'placeholder-google-client-secret',
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     },
   },
   user: {
     additionalFields: {
       role: {
-        defaultValue: 'attendee',
+        defaultValue: 'user',
       },
       isBlocked: {
         defaultValue: false,

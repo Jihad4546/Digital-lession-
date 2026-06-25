@@ -168,11 +168,11 @@ export default function RegisterPage() {
                 {...register("role", { required: "Role is required" })}
                 className="w-full mt-1 rounded-2xl bg-white/5 border border-white/10 px-4 py-3 text-slate-200 focus:border-pink-500 outline-none transition"
               >
-                <option value="attendee" className="bg-slate-900">
-                  Attendee
+                <option value="user" className="bg-slate-900">
+                  User
                 </option>
-                <option value="organizer" className="bg-slate-900">
-                  Organizer
+                <option value="Admin" className="bg-slate-900">
+                  Admin
                 </option>
               </select>
               {errors.role && (
