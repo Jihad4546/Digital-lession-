@@ -1,21 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@heroui/react";
 import { FaCrown, FaShieldAlt } from "react-icons/fa";
 import toast from "react-hot-toast";
+// ⚠️ আপনার প্রজেক্টের authClient পাথ অনুযায়ী নিচের লাইনটি চেঞ্জ করুন
+import { authClient } from "@/lib/auth-client"; 
 
 export default function PricingPage() {
   const router = useRouter();
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    // Better Auth বা localStorage থেকে ইউজার ডাটা নেওয়া
-    const storedUser = JSON.parse(localStorage.getItem("user"));
-    setUser(storedUser);
-  }, []);
+  
+  // 💡 Better Auth থেকে সরাসরি কারেন্ট লগইন থাকা ইউজারের ডাটা আনা হচ্ছে
+  const { data: session, isPending } = authClient.useSession();
+  const user = session?.user;
 
   const features = [
     { feature: "Create Free Lessons", free: "✅ Unlimited", premium: "✅ Unlimited" },
@@ -29,33 +26,49 @@ export default function PricingPage() {
   ];
 
   const handleUpgrade = async () => {
+    // ১. ইউজার লগইন করা না থাকলে
     if (!user) {
       toast.error("Please log in to upgrade your membership!");
       return router.push("/login");
     }
 
-    setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/create-checkout-session`, {
+      // ২. আপনার ৮০০০ পোর্টে রানিং এক্সপ্রেস ব্যাকএন্ডে রিকোয়েস্ট পাঠানো
+      const res = await fetch("http://localhost:8000/create-checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, userEmail: user.email }),
+        body: JSON.stringify({ userId: user.id || user._id, userEmail: user.email }),
       });
 
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Server responded with an error");
+      }
+
       const data = await res.json();
+      
+      // ৩. স্ট্রাইপ পেমেন্ট পেজে রিডাইরেক্ট
       if (data.url) {
         window.location.href = data.url;
       } else {
-        throw new Error("Invalid checkout URL");
+        throw new Error("Invalid checkout URL from server");
       }
     } catch (err) {
-      toast.error("Stripe Checkout initiation failed!");
-    } finally {
-      setLoading(false);
+      console.error("Stripe Error: ", err);
+      toast.error(err.message || "Stripe Checkout initiation failed!");
     }
   };
 
-  // ইউজার অলরেডি প্রিমিয়াম হলে
+  // Better Auth ডাটা লোড করার সময় লোডিং দেখাবে
+  if (isPending) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
+        <p className="text-purple-400 animate-pulse">Loading user session...</p>
+      </div>
+    );
+  }
+
+  // ইউজার অলরেডি প্রিমিয়াম হলে (ডাটাবেজে যদি isPremium: true থাকে)
   if (user?.isPremium) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center text-center p-4">
@@ -77,12 +90,11 @@ export default function PricingPage() {
 
   return (
     <section className="min-h-screen bg-slate-950 text-slate-100 py-16 px-4 md:px-10 relative overflow-hidden">
-      {/* ব্যাকগ্রাউন্ড গ্লো ইফেক্ট */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none"></div>
 
       <div className="max-w-4xl mx-auto relative z-10 space-y-10">
 
-        {/* Title & Subtitle */}
+        {/* Title */}
         <div className="text-center space-y-3">
           <div className="flex justify-center">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold bg-purple-500/10 text-purple-400 border border-purple-500/20 shadow-sm">
@@ -97,7 +109,7 @@ export default function PricingPage() {
           </p>
         </div>
 
-        {/* 💡 কাস্টম Tailwind CSS ডার্ক টেবিল (এরর-ফ্রি এবং রেসপন্সিভ) */}
+        {/* Table */}
         <div className="bg-slate-900/30 backdrop-blur-md rounded-2xl border border-white/5 overflow-hidden shadow-xl">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -112,19 +124,10 @@ export default function PricingPage() {
               </thead>
               <tbody>
                 {features.map((item, index) => (
-                  <tr 
-                    key={index} 
-                    className="border-b border-white/5 hover:bg-white/[0.02] transition-colors"
-                  >
-                    <td className="p-4 font-medium text-slate-300 text-sm sm:text-base">
-                      {item.feature}
-                    </td>
-                    <td className="p-4 text-slate-400 text-sm">
-                      {item.free}
-                    </td>
-                    <td className="p-4 text-purple-400 font-semibold text-sm">
-                      {item.premium}
-                    </td>
+                  <tr key={index} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                    <td className="p-4 font-medium text-slate-300 text-sm sm:text-base">{item.feature}</td>
+                    <td className="p-4 text-slate-400 text-sm">{item.free}</td>
+                    <td className="p-4 text-purple-400 font-semibold text-sm">{item.premium}</td>
                   </tr>
                 ))}
               </tbody>
@@ -132,13 +135,12 @@ export default function PricingPage() {
           </div>
         </div>
 
-        {/* Action Button & Payment Guard Info */}
+        {/* Action Button */}
         <div className="text-center space-y-4 max-w-sm mx-auto">
           <Button
             size="lg"
             color="secondary"
             className="w-full font-bold bg-purple-600 hover:bg-purple-700 shadow-lg shadow-purple-600/20 transition-all transform hover:scale-[1.01]"
-            isLoading={loading}
             onClick={handleUpgrade}
             endContent={<FaCrown className="text-sm text-amber-300" />}
           >
