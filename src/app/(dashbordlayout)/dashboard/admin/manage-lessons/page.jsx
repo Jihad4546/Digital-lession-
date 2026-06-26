@@ -1,71 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, Input, Avatar, Button, Chip } from "@heroui/react";
 import { FaSearch, FaTrash, FaStar, FaCheckCircle, FaFlag, FaEye, FaLock, FaGlobe } from "react-icons/fa";
 
-const lessons = [
-  {
-    _id: 1,
-    title: "Mastering Time Management",
-    category: "Productivity",
-    author: { name: "Jahid Hosen", image: "https://i.pravatar.cc/150?img=1" },
-    visibility: "public",
-    flagged: false,
-    featured: false,
-    reviewed: true,
-    thumbnail: "https://picsum.photos/seed/lesson1/80/60",
-  },
-  {
-    _id: 2,
-    title: "Digital Minimalism Guide",
-    category: "Lifestyle",
-    author: { name: "Siam Ahmed", image: "https://i.pravatar.cc/150?img=2" },
-    visibility: "private",
-    flagged: true,
-    featured: false,
-    reviewed: false,
-    thumbnail: "https://picsum.photos/seed/lesson2/80/60",
-  },
-  {
-    _id: 3,
-    title: "Morning Routine Secrets",
-    category: "Health",
-    author: { name: "Rahat Islam", image: "https://i.pravatar.cc/150?img=3" },
-    visibility: "public",
-    flagged: false,
-    featured: true,
-    reviewed: true,
-    thumbnail: "https://picsum.photos/seed/lesson3/80/60",
-  },
-  {
-    _id: 4,
-    title: "Financial Freedom Basics",
-    category: "Finance",
-    author: { name: "Nadia Parvin", image: "https://i.pravatar.cc/150?img=4" },
-    visibility: "public",
-    flagged: true,
-    reviewed: false,
-    featured: false,
-    thumbnail: "https://picsum.photos/seed/lesson4/80/60",
-  },
-  {
-    _id: 5,
-    title: "Deep Work Techniques",
-    category: "Productivity",
-    author: { name: "Tanvir Hasan", image: "https://i.pravatar.cc/150?img=5" },
-    visibility: "private",
-    flagged: false,
-    featured: false,
-    reviewed: false,
-    thumbnail: "https://picsum.photos/seed/lesson5/80/60",
-  },
-];
-
+const API = process.env.NEXT_PUBLIC_API_URL;
 const categories = ["All", "Productivity", "Lifestyle", "Health", "Finance"];
 
 export default function ManageLessonsPage() {
-  const [data, setData] = useState(lessons);
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [visibilityFilter, setVisibilityFilter] = useState("all");
@@ -73,43 +17,77 @@ export default function ManageLessonsPage() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  // Data fetch
+  useEffect(() => {
+    console.log("API URL:", process.env.NEXT_PUBLIC_API_URL);
+
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/lessons`)
+      .then(res => {
+        console.log("Status:", res.status);
+        return res.json();
+      })
+      .then(data => {
+        console.log("Data received:", data);
+        setData(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Error:", err);
+        setLoading(false);
+      });
+  }, []);
+
+  // Filter
   const filtered = data.filter((l) => {
     const matchSearch =
-      l.title.toLowerCase().includes(search.toLowerCase()) ||
-      l.author.name.toLowerCase().includes(search.toLowerCase());
+      l.title?.toLowerCase().includes(search.toLowerCase()) ||
+      l.creatorName?.toLowerCase().includes(search.toLowerCase());
     const matchCat = categoryFilter === "All" || l.category === categoryFilter;
-    const matchVis = visibilityFilter === "all" || l.visibility === visibilityFilter;
+    const matchVis = visibilityFilter === "all" || l.visibility?.toLowerCase() === visibilityFilter;
     const matchFlag =
-      flagFilter === "all" || (flagFilter === "flagged" ? l.flagged : !l.flagged);
+      flagFilter === "all" || (flagFilter === "flagged" ? l.isReported : !l.isReported);
     return matchSearch && matchCat && matchVis && matchFlag;
   });
 
+  // Stats
+  const publicCount = data.filter(l => l.visibility === "Public").length;
+  const privateCount = data.filter(l => l.visibility === "Private").length;
+  const flaggedCount = data.filter(l => l.isReported).length;
+
+  // Delete
   const confirmDelete = (lesson) => {
     setDeleteTarget(lesson);
     setShowConfirm(true);
   };
 
-  const handleDelete = () => {
-    setData((prev) => prev.filter((l) => l._id !== deleteTarget._id));
+  const handleDelete = async () => {
+    if (!deleteTarget) return; // ✅ guard clause
+
+    const idToDelete = deleteTarget._id; // ✅ আগেই আলাদা variable এ রাখো
     setShowConfirm(false);
     setDeleteTarget(null);
+
+    await fetch(`${API}/api/admin/lessons/${idToDelete}`, { method: "DELETE" });
+    setData(prev => prev.filter(l => l._id !== idToDelete));
   };
 
-  const toggleFeatured = (id) => {
-    setData((prev) =>
-      prev.map((l) => (l._id === id ? { ...l, featured: !l.featured } : l))
+  // Featured toggle
+  const toggleFeatured = async (id) => {
+    await fetch(`${API}/api/admin/lessons/${id}/featured`, { method: "PATCH" });
+    setData(prev =>
+      prev.map(l => l._id === id ? { ...l, isFeatured: !l.isFeatured } : l)
     );
   };
 
-  const toggleReviewed = (id) => {
-    setData((prev) =>
-      prev.map((l) => (l._id === id ? { ...l, reviewed: !l.reviewed } : l))
+  // Reviewed toggle
+  const toggleReviewed = async (id) => {
+    await fetch(`${API}/api/admin/lessons/${id}/reviewed`, { method: "PATCH" });
+    setData(prev =>
+      prev.map(l => l._id === id ? { ...l, isReviewed: !l.isReviewed } : l)
     );
   };
 
-  const publicCount = data.filter((l) => l.visibility === "public").length;
-  const privateCount = data.filter((l) => l.visibility === "private").length;
-  const flaggedCount = data.filter((l) => l.flagged).length;
+  if (loading) return <p className="p-6">Loading...</p>;
 
   return (
     <div className="space-y-6 p-6">
@@ -220,14 +198,9 @@ export default function ManageLessonsPage() {
                   >
                     <td className="py-3 pr-4">
                       <div className="flex items-center gap-3">
-                        <img
-                          src={lesson.thumbnail}
-                          alt={lesson.title}
-                          className="w-16 h-12 object-cover rounded-lg flex-shrink-0"
-                        />
                         <div>
                           <p className="font-medium leading-tight">{lesson.title}</p>
-                          {lesson.featured && (
+                          {lesson.isFeatured && (
                             <span className="text-xs text-warning font-medium flex items-center gap-1 mt-0.5">
                               <FaStar className="text-warning" /> Featured
                             </span>
@@ -238,8 +211,8 @@ export default function ManageLessonsPage() {
 
                     <td className="py-3 pr-4">
                       <div className="flex items-center gap-2">
-                        <Avatar src={lesson.author.image} size="sm" />
-                        <span className="whitespace-nowrap">{lesson.author.name}</span>
+                        <Avatar src={lesson.creatorImage} size="sm" />
+                        <span className="whitespace-nowrap">{lesson.creatorName}</span>
                       </div>
                     </td>
 
@@ -252,12 +225,12 @@ export default function ManageLessonsPage() {
                         <Chip
                           size="sm"
                           variant="flat"
-                          color={lesson.visibility === "public" ? "success" : "default"}
-                          startContent={lesson.visibility === "public" ? <FaGlobe /> : <FaLock />}
+                          color={lesson.visibility === "Public" ? "success" : "default"}
+                          startContent={lesson.visibility === "Public" ? <FaGlobe /> : <FaLock />}
                         >
                           {lesson.visibility}
                         </Chip>
-                        {lesson.reviewed && (
+                        {lesson.isReviewed && (
                           <Chip size="sm" variant="flat" color="primary" startContent={<FaCheckCircle />}>
                             Reviewed
                           </Chip>
@@ -266,7 +239,7 @@ export default function ManageLessonsPage() {
                     </td>
 
                     <td className="py-3 pr-4">
-                      {lesson.flagged ? (
+                      {lesson.isReported ? (
                         <Chip size="sm" variant="flat" color="danger" startContent={<FaFlag />}>
                           Flagged
                         </Chip>
@@ -280,20 +253,20 @@ export default function ManageLessonsPage() {
                         <Button
                           size="sm"
                           variant="flat"
-                          color={lesson.featured ? "warning" : "default"}
+                          color={lesson.isFeatured ? "warning" : "default"}
                           startContent={<FaStar />}
                           onPress={() => toggleFeatured(lesson._id)}
                         >
-                          {lesson.featured ? "Unfeature" : "Feature"}
+                          {lesson.isFeatured ? "Unfeature" : "Feature"}
                         </Button>
                         <Button
                           size="sm"
                           variant="flat"
-                          color={lesson.reviewed ? "primary" : "default"}
-                          startContent={lesson.reviewed ? <FaCheckCircle /> : <FaEye />}
+                          color={lesson.isReviewed ? "primary" : "default"}
+                          startContent={lesson.isReviewed ? <FaCheckCircle /> : <FaEye />}
                           onPress={() => toggleReviewed(lesson._id)}
                         >
-                          {lesson.reviewed ? "Reviewed" : "Mark Reviewed"}
+                          {lesson.isReviewed ? "Reviewed" : "Mark Reviewed"}
                         </Button>
                         <Button
                           size="sm"
@@ -313,7 +286,7 @@ export default function ManageLessonsPage() {
         </div>
       </Card>
 
-      {/* DELETE CONFIRMATION POPUP */}
+      {/* DELETE CONFIRMATION */}
       {showConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white dark:bg-default-100 rounded-2xl shadow-xl p-6 w-full max-w-md mx-4">
@@ -324,17 +297,12 @@ export default function ManageLessonsPage() {
             </p>
             <p className="text-default-500 text-sm mt-1">This action cannot be undone.</p>
             <div className="flex justify-end gap-3 mt-6">
-              <Button variant="flat" onPress={() => setShowConfirm(false)}>
-                Cancel
-              </Button>
-              <Button color="danger" onPress={handleDelete}>
-                Yes, Delete
-              </Button>
+              <Button variant="flat" onPress={() => setShowConfirm(false)}>Cancel</Button>
+              <Button color="danger" onPress={handleDelete}>Yes, Delete</Button>
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }
