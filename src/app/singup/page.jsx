@@ -71,6 +71,11 @@ export default function RegisterPage() {
     }
   };
 
+  const handleGoogleSingup=async()=>{
+    await authClient.signIn.social({
+      provider:'google'
+    })
+  }
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-black px-4 py-10 ">
 
@@ -198,6 +203,7 @@ export default function RegisterPage() {
 
           {/* GOOGLE */}
           <Button
+            onClick={handleGoogleSingup}
             variant="bordered"
             className="w-full h-12 rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition"
             startContent={<FaGoogle className="text-pink-500" />}

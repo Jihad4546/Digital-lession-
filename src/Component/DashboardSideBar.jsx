@@ -165,7 +165,7 @@ const DashboardSideBar = () => {
             className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-medium text-sm text-red-400 hover:bg-red-500/10 border border-transparent transition-all duration-200"
           >
             <FaSignOutAlt size={16} className="text-red-400" />
-            <span>Sign Out</span>
+            <span>Log Out</span>
           </button>
         </nav>
       </aside>
@@ -173,4 +173,4 @@ const DashboardSideBar = () => {
   );
 };
 
-export default DashboardSideBar;
+export default DashboardSideBar; 

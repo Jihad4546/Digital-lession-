@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-
+import { FaGoogle } from "react-icons/fa6";
 import {
   Card,
   CardHeader,
@@ -13,7 +13,7 @@ import {
   Form,
 } from "@heroui/react";
 
-import { FaEnvelope, FaLock, FaGoogle } from "react-icons/fa";
+import { FaEnvelope, FaLock, } from "react-icons/fa";
 import { useForm } from "react-hook-form";
 import { authClient } from "@/lib/auth-client";
 import toast from "react-hot-toast";
@@ -50,11 +50,15 @@ const LoginPage = () => {
       toast.error("Something went wrong");
     }
   };
-
+  const handleGoogleSingup = async () => {
+    await authClient.signIn.social({
+      provider: 'google'
+    })
+  }
   return (
     <div className="mx-auto">
       <Card className="w-full max-w-md border border-white/5 bg-slate-950/70 backdrop-blur-xl shadow-2xl p-4 mt-24 mb-5">
-        
+
         {/* HEADER */}
         <CardHeader className="flex flex-col gap-1 items-center pb-6 text-center">
           <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-pink-500 bg-clip-text text-transparent">
@@ -122,11 +126,16 @@ const LoginPage = () => {
 
           {/* GOOGLE */}
           <Button
+            onClick={handleGoogleSingup}
             variant="bordered"
-            className="w-full border-white/10 text-white"
-            startContent={<FaGoogle className="text-pink-500" />}
+            className="w-full border-white/10 text-white bg-white/5 transition-all duration-300 ease-in-out hover:border-pink-500/40 hover:bg-pink-500/10 hover:shadow-[0_0_15px_rgba(236,72,153,0.15)]"
+            startContent={
+              <span className="flex items-center justify-center min-w-[20px] min-h-[20px]">
+                <FaGoogle size={18} className="text-pink-500 block" />
+              </span>
+            }
           >
-            Google Account
+            Login With  Google Account
           </Button>
 
           {/* SIGNUP LINK */}
