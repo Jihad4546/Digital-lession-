@@ -171,9 +171,6 @@ export default function RegisterPage() {
                 <option value="user" className="bg-slate-900">
                   User
                 </option>
-                <option value="Admin" className="bg-slate-900">
-                  Admin
-                </option>
               </select>
               {errors.role && (
                 <p className="text-red-500 text-sm mt-1">

@@ -52,9 +52,8 @@ export default function Navbar() {
     return (
       <Link
         href={href}
-        className={`text-sm font-medium transition-colors ${
-          isActive ? "text-pink-500 font-semibold" : "text-slate-300 hover:text-white"
-        }`}
+        className={`text-sm font-medium transition-colors ${isActive ? "text-pink-500 font-semibold" : "text-slate-300 hover:text-white"
+          }`}
       >
         {label}
       </Link>
@@ -67,11 +66,10 @@ export default function Navbar() {
       <Link
         href={href}
         onClick={closeMenu}
-        className={`block w-full py-2 px-3 rounded-xl text-sm font-medium transition-colors ${extra} ${
-          isActive
+        className={`block w-full py-2 px-3 rounded-xl text-sm font-medium transition-colors ${extra} ${isActive
             ? "text-pink-500 bg-pink-500/10"
             : "text-slate-300 hover:text-white hover:bg-white/5 active:bg-white/10"
-        }`}
+          }`}
       >
         {label}
       </Link>
@@ -92,8 +90,10 @@ export default function Navbar() {
         </button>
 
         {/* LOGO: লোগো অ্যাড করা হয়েছে যাতে লেআউট নষ্ট না হয় */}
-        <Link href="/" className="text-xl font-bold bg-gradient-to-r from-pink-500 to-indigo-500 bg-clip-text text-transparent">
-          DevLessons
+        <Link href="/">
+          <h2 className="text-xl font-extrabold text-white tracking-tight">
+            📚 Digital Life Lessons
+          </h2>
         </Link>
 
         {/* DESKTOP NAV */}
@@ -105,9 +105,8 @@ export default function Navbar() {
           {user && isFreePlan && (
             <Link
               href="/pricing"
-              className={`text-sm font-semibold transition-colors ${
-                pathname === "/pricing" ? "text-pink-400" : "text-pink-500 hover:text-pink-400"
-              }`}
+              className={`text-sm font-semibold transition-colors ${pathname === "/pricing" ? "text-pink-400" : "text-pink-500 hover:text-pink-400"
+                }`}
             >
               Upgrade ✦
             </Link>
@@ -116,7 +115,7 @@ export default function Navbar() {
 
         {/* RIGHT ACTIONS */}
         <div className="flex items-center gap-3">
-          
+
           {!session && (
             <div className="flex items-center gap-2">
               <Link href="/login">
@@ -125,7 +124,7 @@ export default function Navbar() {
                 </button>
               </Link>
               <Link
-                href="/register"
+                href="/singup"
                 className="inline-flex items-center justify-center font-semibold text-xs bg-gradient-to-r from-pink-500 to-indigo-600 text-white shadow-lg shadow-pink-500/10 hover:shadow-pink-500/20 transition h-9 px-4 rounded-xl"
               >
                 Sign Up
