@@ -1,6 +1,6 @@
 import Footer from "@/Component/footer";
 import AppNavbar from "@/Component/Navber";
-import { Toaster } from "react-hot-toast";
+import { ToastContainer } from "react-toastify";
 
 export default function RootLayout({ children }) {
   return (
@@ -8,7 +8,7 @@ export default function RootLayout({ children }) {
       <AppNavbar></AppNavbar>
       <div>   {children}   </div>
       <Footer></Footer>
-      <Toaster/>
+       <ToastContainer />
     </div>
   );
 }
